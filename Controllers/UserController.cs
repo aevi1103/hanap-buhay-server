@@ -1,4 +1,5 @@
 ﻿using hanap_buhay_server.Entities;
+using hanap_buhay_server.Models;
 using hanap_buhay_server.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -44,7 +45,6 @@ namespace hanap_buhay_server.Controllers
             }
         }
 
-
         [Route("/{userId}")]
         [HttpDelete]
         public async Task<IActionResult> Delete(Guid userid)
@@ -62,11 +62,11 @@ namespace hanap_buhay_server.Controllers
 
         [Route("/{userId}")]
         [HttpGet]
-        public async Task<IActionResult> Get(Guid userid)
+        public async Task<IActionResult> Get(Guid userId)
         {
             try
             {
-                var data = await _service.Read(userid);
+                var data = await _service.Read(userId);
                 return Ok(data);
             }
             catch (Exception e)
@@ -81,6 +81,21 @@ namespace hanap_buhay_server.Controllers
             try
             {
                 var data = await _service.ReadAll();
+                return Ok(data);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [Route("login")]
+        [HttpPost]
+        public async Task<IActionResult> Login(Login parameters)
+        {
+            try
+            {
+                var data = await _service.Login(parameters);
                 return Ok(data);
             }
             catch (Exception e)

@@ -18,9 +18,8 @@ services.AddScoped<IUserService, UserService>();
 
 // connection string
 // todo: move connection string to secret
-services.AddDbContext<hanapbuhayContext>(opt =>
+services.AddDbContext<hanapbuhayContext>(opt => 
     opt.UseNpgsql(builder.Configuration.GetConnectionString("conn")));
-
 
 var app = builder.Build();
 

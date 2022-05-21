@@ -3,6 +3,8 @@ using hanap_buhay_server.Entities;
 using hanap_buhay_server.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using EmailValidation;
+using hanap_buhay_server.Models;
+using static BCrypt.Net.BCrypt;
 
 namespace hanap_buhay_server.Services
 {
@@ -15,36 +17,53 @@ namespace hanap_buhay_server.Services
             _context = context;
         }
 
-        public async Task<User> Create(User user)
+        private async Task<bool> IsUserNameExists(string username)
         {
-            if (user == null) throw new ArgumentNullException(nameof(user));
-
-            user.Uuid = Guid.NewGuid();
-            user.DateCreated = DateTime.Now;
-            user.DateModified = null;
-
             var isUserNameExist = await _context
                 .Users
-                .AnyAsync(x => x.UserName.ToLower().Trim() == user.UserName.ToLower().Trim());
+                .AnyAsync(x => x.UserName.ToLower().Trim() == username.ToLower().Trim());
 
-            if (isUserNameExist)
-                throw new OperationCanceledException($"Username '{user.UserName}' already in use");
+            return isUserNameExist;
+        }
 
+        private async Task<bool> IsEmailExists(string email)
+        {
             var isEmailExists = await _context
                 .Users
-                .AnyAsync(x => x.Email.ToLower().Trim() == user.Email.ToLower().Trim());
+                .AnyAsync(x => x.Email.ToLower().Trim() == email.ToLower().Trim());
 
-            if (isEmailExists)
-                throw new OperationCanceledException($"Email '{user.Email}' already in use");
+            return isEmailExists;
+        }
 
-            var isValidEmail = EmailValidator.Validate(user.Email);
+        public async Task<User> Create(User user)
+        {
+            try
+            {
+                if (user == null) throw new ArgumentNullException(nameof(user));
 
-            if (!isValidEmail)
-                throw new OperationCanceledException("Invalid email address");
+                if (await IsUserNameExists(user.UserName))
+                    throw new OperationCanceledException($"Username '{user.UserName}' already in use");
 
-            var record = await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-            return record.Entity;
+                if (await IsEmailExists(user.Email))
+                    throw new OperationCanceledException($"Email '{user.Email}' already in use");
+
+                if (!EmailValidator.Validate(user.Email))
+                    throw new OperationCanceledException("Invalid email address");
+
+                if (string.IsNullOrEmpty(user.Password))
+                    throw new OperationCanceledException("Invalid password!");
+
+                user.Uuid = Guid.NewGuid();
+                user.Password = HashPassword(user.Password);
+
+                var record = await _context.Users.AddAsync(user);
+                await _context.SaveChangesAsync();
+                return record.Entity;
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
         }
 
         public async Task<User> Update(User user)
@@ -71,6 +90,22 @@ namespace hanap_buhay_server.Services
             return await _context.Users.ToListAsync();
         }
 
+        public async Task<dynamic> Login(Login parameters)
+        {
+            var user = await _context
+                .Users
+                .FirstOrDefaultAsync(x => x.UserName.ToLower().Trim() == parameters.UserName);
 
+            const string errorMsg = "Invalid username and password";
+
+            if (user is null)
+                throw new OperationCanceledException(errorMsg);
+
+            if (!Verify(parameters.Password, user.Password))
+                throw new OperationCanceledException(errorMsg);
+
+            user.Password = null;
+            return user;
+        }
     }
 }

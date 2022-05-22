@@ -1,3 +1,5 @@
+CREATE DATABASE hanap-buhay;
+
 create table users (
 	uuid UUID primary key,
 	user_name varchar(50) unique not null,
@@ -7,4 +9,4 @@ create table users (
 	date_created timestamptz not null,
 	date_modified timestamptz,
 	password text not null
-)
+);
